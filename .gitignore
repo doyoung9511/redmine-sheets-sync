@@ -1,0 +1,22 @@
+# 구글 서비스 계정 인증 파일 (절대 커밋하지 않도록 주의)
+credentials.json
+token.json
+
+# Python 캐시
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# 가상환경
+venv/
+.venv/
+env/
+
+# IDE 설정
+.vscode/
+.idea/
+
+# 환경 변수 파일
+.env
+.env.local
