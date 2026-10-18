@@ -6,35 +6,44 @@
 """
 
 import os
+import sys
 import time
 import schedule
 import gspread
 from datetime import datetime
 from dotenv import load_dotenv
 from google.oauth2.service_account import Credentials
+from redminelib import Redmine
+from redminelib.exceptions import AuthError, ResourceNotFoundError
 
-# .env 파일에서 환경 변수 로드
-load_dotenv()
+# exe로 패키징됐을 때는 실행 파일 위치, 스크립트 실행 시에는 main.py 위치 기준
+if getattr(sys, 'frozen', False):
+    BASE_DIR = os.path.dirname(sys.executable)
+else:
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+# .env 파일을 BASE_DIR에서 로드
+load_dotenv(os.path.join(BASE_DIR, '.env'))
 
 # ==================== 설정 ====================
 
-SCOPES = [
-    'https://www.googleapis.com/auth/spreadsheets',
-    'https://www.googleapis.com/auth/drive',
-]
+# Google Sheets API — 스프레드시트 읽기/쓰기 권한만 사용
+SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
 
-CREDENTIALS_FILE = 'credentials.json'
+CREDENTIALS_FILE = os.path.join(BASE_DIR, 'credentials.json')
 SPREADSHEET_ID   = os.getenv('SPREADSHEET_ID', '')
 
-# 레드마인 서버 주소
-REDMINE_URL     = 'http://localhost/redmine'
-# 레드마인 API 키 → .env 파일의 REDMINE_API_KEY에서 읽어옴
+# 레드마인 연결 정보 → .env에서 읽어옴
+REDMINE_URL     = os.getenv('REDMINE_URL', '')
 REDMINE_API_KEY = os.getenv('REDMINE_API_KEY', '')
+
+# 동기화 주기 (분)
+SYNC_INTERVAL_MINUTES = 5
 
 # 시트 이름 형식: "{버전}_패치리스트" (예: 1.42.1_패치리스트)
 SHEET_SUFFIX = '_패치리스트'
 
-# 컬럼 헤더 (A~K, 총 11열) — 맨 앞에 링크 열 추가
+# 컬럼 헤더 (A~K, 총 11열) — A열: 링크, B열: 이슈번호, J·K열: 수동 입력
 HEADERS = ['링크', '#', '상태', '유형', '우선순위', '제목', '담당자', '저자', '진척도', 'QA담당자', 'QA확인여부']
 
 # 우선순위별 행 배경색 (RGB, 각 채널 0.0~1.0)
@@ -49,139 +58,6 @@ PRIORITY_ROW_COLORS = {
 PRIORITY_ORDER = {'Critical': 0, 'Major': 1, 'Normal': 2, 'Minor': 3}
 
 
-# ==================== 샘플 데이터 ====================
-# 실제 레드마인 연동 시에는 아래 SAMPLE_ISSUES를 사용하지 않음
-# 테스트가 필요할 때는 get_issues() 함수 마지막 줄을 주석 참고
-
-# SAMPLE_ISSUES = [
-SAMPLE_ISSUES = [
-    # ── 버전 1.42.1 ──────────────────────────────────────
-    {
-        'id': 2001,
-        'subject':      '로그인 페이지 500 오류 발생',
-        'status':       {'name': '해결'},
-        'tracker':      {'name': '결함'},
-        'priority':     {'name': 'Critical'},
-        'assigned_to':  {'name': '김철수'},
-        'author':       {'name': '이팀장'},
-        'done_ratio':   50,
-        'fixed_version':{'name': '1.42.1'},
-    },
-    {
-        'id': 2002,
-        'subject':      '결제 모듈 예외 미처리 버그',
-        'status':       {'name': '해결'},
-        'tracker':      {'name': '결함'},
-        'priority':     {'name': 'Critical'},
-        'assigned_to':  {'name': '박민준'},
-        'author':       {'name': '이팀장'},
-        'done_ratio':   50,
-        'fixed_version':{'name': '1.42.1'},
-    },
-    {
-        'id': 2003,
-        'subject':      'API 응답 속도 개선',
-        'status':       {'name': '해결'},
-        'tracker':      {'name': '새기능'},
-        'priority':     {'name': 'Major'},
-        'assigned_to':  {'name': '최수진'},
-        'author':       {'name': '박팀장'},
-        'done_ratio':   50,
-        'fixed_version':{'name': '1.42.1'},
-    },
-    {
-        'id': 2004,
-        'subject':      '검색 필터 조건 초기화 문제',
-        'status':       {'name': '해결'},
-        'tracker':      {'name': '결함'},
-        'priority':     {'name': 'Major'},
-        'assigned_to':  {'name': '강현우'},
-        'author':       {'name': '김팀장'},
-        'done_ratio':   50,
-        'fixed_version':{'name': '1.42.1'},
-    },
-    {
-        'id': 2005,
-        'subject':      '마이페이지 UI 개선',
-        'status':       {'name': '해결'},
-        'tracker':      {'name': '새기능'},
-        'priority':     {'name': 'Normal'},
-        'assigned_to':  {'name': '윤지영'},
-        'author':       {'name': '박팀장'},
-        'done_ratio':   50,
-        'fixed_version':{'name': '1.42.1'},
-    },
-    {
-        'id': 2006,
-        'subject':      '공지사항 목록 페이지네이션 구현',
-        'status':       {'name': '해결'},
-        'tracker':      {'name': '새기능'},
-        'priority':     {'name': 'Normal'},
-        'assigned_to':  {'name': '임성훈'},
-        'author':       {'name': '이팀장'},
-        'done_ratio':   50,
-        'fixed_version':{'name': '1.42.1'},
-    },
-    {
-        'id': 2007,
-        'subject':      '도움말 페이지 오타 관련 문의',
-        'status':       {'name': '해결'},
-        'tracker':      {'name': '문의'},
-        'priority':     {'name': 'Minor'},
-        'assigned_to':  {'name': '한소희'},
-        'author':       {'name': '김팀장'},
-        'done_ratio':   50,
-        'fixed_version':{'name': '1.42.1'},
-    },
-    # ── 버전 1.42.2 ──────────────────────────────────────
-    {
-        'id': 2008,
-        'subject':      '데이터베이스 연결 타임아웃',
-        'status':       {'name': '해결'},
-        'tracker':      {'name': '결함'},
-        'priority':     {'name': 'Critical'},
-        'assigned_to':  {'name': '이영희'},
-        'author':       {'name': '이팀장'},
-        'done_ratio':   50,
-        'fixed_version':{'name': '1.42.2'},
-    },
-    {
-        'id': 2009,
-        'subject':      '프로필 이미지 업로드 오류',
-        'status':       {'name': '해결'},
-        'tracker':      {'name': '결함'},
-        'priority':     {'name': 'Major'},
-        'assigned_to':  {'name': '정다혜'},
-        'author':       {'name': '박팀장'},
-        'done_ratio':   50,
-        'fixed_version':{'name': '1.42.2'},
-    },
-    {
-        'id': 2010,
-        'subject':      '이메일 알림 템플릿 수정 문의',
-        'status':       {'name': '해결'},
-        'tracker':      {'name': '문의'},
-        'priority':     {'name': 'Normal'},
-        'assigned_to':  {'name': '조현아'},
-        'author':       {'name': '김팀장'},
-        'done_ratio':   50,
-        'fixed_version':{'name': '1.42.2'},
-    },
-    {
-        'id': 2011,
-        'subject':      '다크모드 지원 추가',
-        'status':       {'name': '해결'},
-        'tracker':      {'name': '새기능'},
-        'priority':     {'name': 'Minor'},
-        'assigned_to':  {'name': '임성훈'},
-        'author':       {'name': '이팀장'},
-        'done_ratio':   50,
-        'fixed_version':{'name': '1.42.2'},
-    },
-]
-# ]   ← 샘플 데이터 사용 시 위 닫는 대괄호 주석 해제, 아래 SAMPLE_ISSUES = [ 주석 처리
-
-
 # ==================== 레드마인 데이터 로드 ====================
 
 def _safe_get(resource, attr):
@@ -194,7 +70,7 @@ def _safe_get(resource, attr):
 
 def _resource_to_dict(issue):
     """
-    redminelib Resource 객체 → 샘플 데이터와 동일한 딕셔너리 형식으로 변환.
+    redminelib Resource 객체 → 딕셔너리 형식으로 변환.
     assigned_to / fixed_version 같은 선택 필드는 없을 수 있으므로 안전하게 처리.
     """
     assigned = _safe_get(issue, 'assigned_to')
@@ -216,12 +92,10 @@ def get_issues():
     """
     레드마인 API에서 모든 프로젝트의 이슈를 가져와 딕셔너리 목록으로 반환.
 
-    샘플 데이터로 테스트하려면:
+    샘플 데이터로 테스트하려면 본문을 아래로 교체:
+        from sample_data import SAMPLE_ISSUES
         return SAMPLE_ISSUES
     """
-    from redminelib import Redmine
-    from redminelib.exceptions import AuthError, ImpersonateError, ResourceNotFoundError
-
     print(f"레드마인 이슈를 가져오는 중... ({REDMINE_URL})")
     try:
         rm     = Redmine(REDMINE_URL, key=REDMINE_API_KEY)
@@ -232,9 +106,9 @@ def get_issues():
         return result
 
     except AuthError:
-        print(f"  [오류] 인증 실패 — REDMINE_API_KEY를 확인하세요.")
+        print("  [오류] 인증 실패 — REDMINE_API_KEY를 확인하세요.")
     except ResourceNotFoundError:
-        print(f"  [오류] 리소스를 찾을 수 없습니다 — REDMINE_URL을 확인하세요.")
+        print("  [오류] 리소스를 찾을 수 없습니다 — REDMINE_URL을 확인하세요.")
     except Exception as e:
         print(f"  [오류] 레드마인 연결 실패: {e}")
 
@@ -437,11 +311,58 @@ def sync_all():
         for version, version_issues in version_bucket.items():
             sync_version_sheet(spreadsheet, version, version_issues)
 
-        print(f"\n동기화 완료! 다음 실행: 5분 후")
+        print(f"\n동기화 완료! 다음 실행: {SYNC_INTERVAL_MINUTES}분 후")
 
     except Exception as e:
         # 오류가 발생해도 스케줄러가 멈추지 않도록 예외를 출력만 하고 계속 진행
         print(f"\n[오류] 동기화 중 문제 발생: {e}")
+
+
+# ==================== 시작 전 검증 ====================
+
+def check_required_files():
+    """필수 파일 존재 여부 확인. 누락 파일이 있으면 안내 후 False 반환"""
+    env_path   = os.path.join(BASE_DIR, '.env')
+    creds_path = CREDENTIALS_FILE
+
+    missing = []
+    if not os.path.isfile(env_path):
+        missing.append(f'  - .env  ({env_path})')
+    if not os.path.isfile(creds_path):
+        missing.append(f'  - credentials.json  ({creds_path})')
+
+    if missing:
+        print("=" * 55)
+        print("[오류] 다음 파일이 실행 폴더에 없습니다:")
+        for m in missing:
+            print(m)
+        print("\n해당 파일을 exe와 같은 폴더에 넣은 후 다시 실행하세요.")
+        print("=" * 55)
+        input("\n엔터를 누르면 종료합니다...")
+        return False
+    return True
+
+
+def check_env_values():
+    """.env 필수 값이 비어있으면 어떤 항목인지 안내 후 False 반환"""
+    required = {
+        'REDMINE_URL':     REDMINE_URL,
+        'REDMINE_API_KEY': REDMINE_API_KEY,
+        'SPREADSHEET_ID':  SPREADSHEET_ID,
+    }
+
+    missing = [key for key, val in required.items() if not val]
+
+    if missing:
+        print("=" * 55)
+        print("[오류] .env 파일에 다음 항목이 설정되지 않았습니다:")
+        for key in missing:
+            print(f"  - {key}")
+        print("\n.env 파일을 열어 해당 값을 입력한 후 다시 실행하세요.")
+        print("=" * 55)
+        input("\n엔터를 누르면 종료합니다...")
+        return False
+    return True
 
 
 # ==================== 메인 ====================
@@ -449,20 +370,25 @@ def sync_all():
 def main():
     print("=" * 55)
     print("레드마인 이슈 → 구글 스프레드시트 자동 동기화")
-    print("실행 주기: 5분마다 | 종료: Ctrl+C")
+    print(f"실행 주기: {SYNC_INTERVAL_MINUTES}분마다 | 종료: Ctrl+C")
     print("=" * 55)
+
+    if not check_required_files():
+        return
+    if not check_env_values():
+        return
 
     # 시작 즉시 1회 실행
     sync_all()
 
-    # 5분마다 반복 실행 등록
-    schedule.every(5).minutes.do(sync_all)
+    # SYNC_INTERVAL_MINUTES마다 반복 실행 등록
+    schedule.every(SYNC_INTERVAL_MINUTES).minutes.do(sync_all)
 
     # 스케줄러 루프 (Ctrl+C로 종료)
     try:
         while True:
             schedule.run_pending()
-            time.sleep(1)
+            time.sleep(2)
     except KeyboardInterrupt:
         print("\n\n스케줄러 종료")
 

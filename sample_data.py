@@ -1,0 +1,136 @@
+# -*- coding: utf-8 -*-
+"""
+테스트용 샘플 이슈 데이터.
+실제 레드마인 연동 시에는 사용되지 않음.
+
+사용법:
+    get_issues() 함수 본문을 아래로 교체:
+        from sample_data import SAMPLE_ISSUES
+        return SAMPLE_ISSUES
+"""
+
+SAMPLE_ISSUES = [
+    # ── 버전 1.42.1 ──────────────────────────────────────
+    {
+        'id': 2001,
+        'subject':       '로그인 페이지 500 오류 발생',
+        'status':        {'name': '해결'},
+        'tracker':       {'name': '결함'},
+        'priority':      {'name': 'Critical'},
+        'assigned_to':   {'name': '김철수'},
+        'author':        {'name': '이팀장'},
+        'done_ratio':    50,
+        'fixed_version': {'name': '1.42.1'},
+    },
+    {
+        'id': 2002,
+        'subject':       '결제 모듈 예외 미처리 버그',
+        'status':        {'name': '해결'},
+        'tracker':       {'name': '결함'},
+        'priority':      {'name': 'Critical'},
+        'assigned_to':   {'name': '박민준'},
+        'author':        {'name': '이팀장'},
+        'done_ratio':    50,
+        'fixed_version': {'name': '1.42.1'},
+    },
+    {
+        'id': 2003,
+        'subject':       'API 응답 속도 개선',
+        'status':        {'name': '해결'},
+        'tracker':       {'name': '새기능'},
+        'priority':      {'name': 'Major'},
+        'assigned_to':   {'name': '최수진'},
+        'author':        {'name': '박팀장'},
+        'done_ratio':    50,
+        'fixed_version': {'name': '1.42.1'},
+    },
+    {
+        'id': 2004,
+        'subject':       '검색 필터 조건 초기화 문제',
+        'status':        {'name': '해결'},
+        'tracker':       {'name': '결함'},
+        'priority':      {'name': 'Major'},
+        'assigned_to':   {'name': '강현우'},
+        'author':        {'name': '김팀장'},
+        'done_ratio':    50,
+        'fixed_version': {'name': '1.42.1'},
+    },
+    {
+        'id': 2005,
+        'subject':       '마이페이지 UI 개선',
+        'status':        {'name': '해결'},
+        'tracker':       {'name': '새기능'},
+        'priority':      {'name': 'Normal'},
+        'assigned_to':   {'name': '윤지영'},
+        'author':        {'name': '박팀장'},
+        'done_ratio':    50,
+        'fixed_version': {'name': '1.42.1'},
+    },
+    {
+        'id': 2006,
+        'subject':       '공지사항 목록 페이지네이션 구현',
+        'status':        {'name': '해결'},
+        'tracker':       {'name': '새기능'},
+        'priority':      {'name': 'Normal'},
+        'assigned_to':   {'name': '임성훈'},
+        'author':        {'name': '이팀장'},
+        'done_ratio':    50,
+        'fixed_version': {'name': '1.42.1'},
+    },
+    {
+        'id': 2007,
+        'subject':       '도움말 페이지 오타 관련 문의',
+        'status':        {'name': '해결'},
+        'tracker':       {'name': '문의'},
+        'priority':      {'name': 'Minor'},
+        'assigned_to':   {'name': '한소희'},
+        'author':        {'name': '김팀장'},
+        'done_ratio':    50,
+        'fixed_version': {'name': '1.42.1'},
+    },
+    # ── 버전 1.42.2 ──────────────────────────────────────
+    {
+        'id': 2008,
+        'subject':       '데이터베이스 연결 타임아웃',
+        'status':        {'name': '해결'},
+        'tracker':       {'name': '결함'},
+        'priority':      {'name': 'Critical'},
+        'assigned_to':   {'name': '이영희'},
+        'author':        {'name': '이팀장'},
+        'done_ratio':    50,
+        'fixed_version': {'name': '1.42.2'},
+    },
+    {
+        'id': 2009,
+        'subject':       '프로필 이미지 업로드 오류',
+        'status':        {'name': '해결'},
+        'tracker':       {'name': '결함'},
+        'priority':      {'name': 'Major'},
+        'assigned_to':   {'name': '정다혜'},
+        'author':        {'name': '박팀장'},
+        'done_ratio':    50,
+        'fixed_version': {'name': '1.42.2'},
+    },
+    {
+        'id': 2010,
+        'subject':       '이메일 알림 템플릿 수정 문의',
+        'status':        {'name': '해결'},
+        'tracker':       {'name': '문의'},
+        'priority':      {'name': 'Normal'},
+        'assigned_to':   {'name': '조현아'},
+        'author':        {'name': '김팀장'},
+        'done_ratio':    50,
+        'fixed_version': {'name': '1.42.2'},
+    },
+    {
+        'id': 2011,
+        'subject':       '다크모드 지원 추가',
+        'status':        {'name': '해결'},
+        'tracker':       {'name': '새기능'},
+        'priority':      {'name': 'Minor'},
+        'assigned_to':   {'name': '임성훈'},
+        'author':        {'name': '이팀장'},
+        'done_ratio':    50,
+        'fixed_version': {'name': '1.42.2'},
+    },
+]

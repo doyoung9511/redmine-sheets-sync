@@ -20,3 +20,11 @@ env/
 # 환경 변수 파일
 .env
 .env.local
+
+# Claude Code 로컬 설정
+.claude/settings.local.json
+
+# PyInstaller 빌드 산출물
+build/
+dist/
+*.spec
