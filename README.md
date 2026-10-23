@@ -1,8 +1,9 @@
 # 🔄 Redmine → Google Sheets Sync
 
-레드마인 이슈를 구글 스프레드시트에 자동으로 동기화하는 Python 자동화 프로그램입니다.
+레드마인 이슈를 구글 스프레드시트에 자동으로 동기화하는 Python 프로그램입니다.
+ 
+https://github.com/user-attachments/assets/15a3735a-aaec-4c54-85eb-6b9804c71d3a
 
-<!-- 시연 영상/GIF를 넣으려면 GitHub 웹 편집기에서 이 위치에 파일을 드래그해 업로드하세요. -->
 
 ---
 
